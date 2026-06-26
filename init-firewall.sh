@@ -76,12 +76,21 @@ while read -r cidr; do
     ipset add allowed-domains "$cidr"
 done < <(echo "$gh_ranges" | jq -r '(.web + .api + .git)[]' | aggregate -q)
 
-# Resolve and add other allowed domains
+# Allow Anthropic's network range (AS399358). api.anthropic.com is load-balanced
+# across this block, so allowing the whole prefix is more robust than pinning the
+# single IP a DNS lookup happens to return. IPv4 only — IPv6 is dropped wholesale
+# above (AS399358 also announces 2607:6bc0::/48 and 2607:6bc0:11::/48).
+echo "Adding Anthropic range 160.79.104.0/23 (AS399358)"
+ipset add allowed-domains 160.79.104.0/23
+
+# Resolve and add other allowed domains. A domain that fails to resolve is
+# skipped with a warning rather than aborting — allowlist domains come and go
+# (e.g. statsig.anthropic.com was retired in favour of statsig.com), and one
+# dead entry must not take down the whole firewall / container startup.
 for domain in \
     "registry.npmjs.org" \
     "api.anthropic.com" \
     "sentry.io" \
-    "statsig.anthropic.com" \
     "statsig.com" \
     "marketplace.visualstudio.com" \
     "vscode.blob.core.windows.net" \
@@ -89,10 +98,10 @@ for domain in \
     echo "Resolving $domain..."
     ips=$(dig +noall +answer A "$domain" | awk '$4 == "A" {print $5}')
     if [ -z "$ips" ]; then
-        echo "ERROR: Failed to resolve $domain"
-        exit 1
+        echo "WARNING: Failed to resolve $domain — skipping"
+        continue
     fi
-    
+
     while read -r ip; do
         if [[ ! "$ip" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
             echo "ERROR: Invalid IP from DNS for $domain: $ip"
