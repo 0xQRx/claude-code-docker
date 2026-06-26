@@ -98,7 +98,7 @@ exec docker run --rm -it \
   -v "$PWD:/workspace" \
   -v claude-box-config:/home/node/.claude \
   -v claude-box-history:/commandhistory \
-  -v claude-box-root-cache:/root/.cache \
+  -v claude-box-cache:/home/node/.cache \
   -w /workspace \
   "$IMAGE" \
   "${CMD[@]}"
