@@ -43,7 +43,7 @@ if [ "$DO_BUILD" = 1 ]; then
     exit 1
   fi
   echo "Building $IMAGE ..."
-  docker build -t "$IMAGE" "${BUILD_ARGS[@]}" "$DIR"
+  docker build -t "$IMAGE" ${BUILD_ARGS[@]+"${BUILD_ARGS[@]}"} "$DIR"
   echo "Built $IMAGE."
 fi
 

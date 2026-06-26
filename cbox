@@ -82,8 +82,8 @@ fi
 case "$MODE" in
   shell)  CMD=(zsh) ;;
   tmux)   CMD=(tmux new-session -A -s main claude) ;;
-  custom) CMD=("${PASS[@]}") ;;
-  *)      CMD=(claude "${PASS[@]}") ;;   # default: claude, forwarding any extra args
+  custom) CMD=(${PASS[@]+"${PASS[@]}"}) ;;
+  *)      CMD=(claude ${PASS[@]+"${PASS[@]}"}) ;;   # default: claude, forwarding any extra args
 esac
 
 exec docker run --rm -it \
@@ -94,11 +94,11 @@ exec docker run --rm -it \
   -e CBOX_LOCKED="$LOCKED" \
   -e CLAUDE_CONFIG_DIR=/home/node/.claude \
   -e TZ="${TZ:-UTC}" \
-  "${CAP_ARGS[@]}" \
+  ${CAP_ARGS[@]+"${CAP_ARGS[@]}"} \
   -v "$PWD:/workspace" \
   -v claude-box-config:/home/node/.claude \
   -v claude-box-history:/commandhistory \
   -v claude-box-cache:/home/node/.cache \
   -w /workspace \
   "$IMAGE" \
-  "${CMD[@]}"
+  ${CMD[@]+"${CMD[@]}"}
