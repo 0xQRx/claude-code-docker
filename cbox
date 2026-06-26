@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# cbox — launch Claude Code in a filesystem-sandboxed Docker container.
+#
+# The container can read/write ONLY the current directory ($PWD). The rest of
+# the host filesystem is invisible. Login + history persist in named Docker
+# volumes (never on host paths).
+#
+# Usage:
+#   cbox                 # launch Claude in the current folder
+#   cbox <args...>       # launch Claude, forwarding extra args (e.g. cbox --resume)
+#   cbox --shell         # drop into a zsh shell in the sandbox instead
+#   cbox --tmux          # launch a tmux session running Claude (prefix+c for more)
+#   cbox --locked        # also enable the egress allowlist firewall
+#   cbox --rebuild       # rebuild the image, then launch
+#   cbox -- <cmd...>     # run an arbitrary command in the sandbox instead
+#
+set -euo pipefail
+
+IMAGE="claude-box:latest"
+
+# Resolve the directory containing this script (and the Dockerfile), following symlinks.
+SOURCE="${BASH_SOURCE[0]}"
+DIR="$(cd "$(dirname "$(readlink -f "$SOURCE")")" && pwd)"
+
+LOCKED=0
+REBUILD=0
+MODE=claude          # claude | shell | tmux | custom
+PASS=()
+
+usage() {
+  cat <<'EOF'
+Usage: cbox [OPTIONS] [-- CMD...]
+
+Launch Claude Code in a filesystem-sandboxed Docker container.
+The container can read/write ONLY the current directory. Login and
+history persist in named Docker volumes (never on host paths).
+
+Options:
+  --shell    Drop into a zsh shell in the sandbox instead of Claude
+  --tmux     Launch a tmux session running Claude (prefix+c for new windows)
+  --locked   Enable the egress allowlist firewall
+  --rebuild  Rebuild the Docker image before launching
+  -- CMD...  Run an arbitrary command in the sandbox instead of Claude
+  -h, --help Show this help message
+
+Any other arguments are forwarded to the claude command inside the container.
+
+Examples:
+  cbox                    Launch Claude in the current folder
+  cbox --resume           Resume the last Claude session
+  cbox --shell            Open a shell in the sandbox
+  cbox --locked           Launch Claude with network egress restricted
+  cbox --rebuild          Rebuild the image, then launch Claude
+  cbox -- python app.py   Run a custom command in the sandbox
+EOF
+}
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -h|--help) usage; exit 0 ;;
+    --locked)  LOCKED=1; shift ;;
+    --rebuild) REBUILD=1; shift ;;
+    --shell)   MODE=shell; shift ;;
+    --tmux)    MODE=tmux; shift ;;
+    --)        shift; MODE=custom; PASS+=("$@"); break ;;
+    *)         PASS+=("$1"); shift ;;
+  esac
+done
+
+# Build the image if missing or if --rebuild was requested.
+if [ "$REBUILD" = 1 ] || ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+  echo "Building $IMAGE ..."
+  docker build -t "$IMAGE" "$DIR"
+fi
+
+CAP_ARGS=()
+if [ "$LOCKED" = 1 ]; then
+  CAP_ARGS=(--cap-add=NET_ADMIN --cap-add=NET_RAW)
+fi
+
+# Resolve the command to run inside the sandbox.
+case "$MODE" in
+  shell)  CMD=(zsh) ;;
+  tmux)   CMD=(tmux new-session -A -s main claude) ;;
+  custom) CMD=("${PASS[@]}") ;;
+  *)      CMD=(claude "${PASS[@]}") ;;   # default: claude, forwarding any extra args
+esac
+
+exec docker run --rm -it \
+  --user root \
+  --entrypoint /usr/local/bin/cbox-entrypoint.sh \
+  -e HOST_UID="$(id -u)" \
+  -e HOST_GID="$(id -g)" \
+  -e CBOX_LOCKED="$LOCKED" \
+  -e CLAUDE_CONFIG_DIR=/home/node/.claude \
+  -e TZ="${TZ:-UTC}" \
+  "${CAP_ARGS[@]}" \
+  -v "$PWD:/workspace" \
+  -v claude-box-config:/home/node/.claude \
+  -v claude-box-history:/commandhistory \
+  -v claude-box-root-cache:/root/.cache \
+  -w /workspace \
+  "$IMAGE" \
+  "${CMD[@]}"
