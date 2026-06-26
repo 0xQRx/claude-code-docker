@@ -104,8 +104,8 @@ bake heavyweight servers into the `Dockerfile`.
 | File | Purpose |
 |---|---|
 | `Dockerfile` | Shared image (Node 20 + Claude Code + tooling). |
+| `build.sh` | One-shot installer: builds the image + symlinks `cbox` onto PATH. |
 | `cbox` | Host launcher script. |
 | `cbox-entrypoint.sh` | Root entrypoint: UID-map → firewall → drop to `node`. |
 | `init-firewall.sh` | Egress allowlist (used by `--locked` and the devcontainer). |
 | `.devcontainer/devcontainer.json` | VS Code path. |
-# claude-code-docker

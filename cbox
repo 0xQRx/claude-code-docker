@@ -70,7 +70,7 @@ done
 # Build the image if missing or if --rebuild was requested.
 if [ "$REBUILD" = 1 ] || ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
   echo "Building $IMAGE ..."
-  docker build -t "$IMAGE" "$DIR"
+  docker build -t "$IMAGE" --build-arg TZ="${TZ:-UTC}" "$DIR"
 fi
 
 CAP_ARGS=()
