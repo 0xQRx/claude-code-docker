@@ -42,6 +42,24 @@ if [ "$DO_BUILD" = 1 ]; then
     echo "ERROR: the Docker daemon is not running or not reachable." >&2
     exit 1
   fi
+
+  # Preflight: Docker Desktop's buildx state can become root-owned (e.g. after a
+  # previous `sudo docker` run), which makes `docker build` fail with a cryptic
+  # "permission denied" on ~/.docker/buildx/refs/... Detect and warn with the fix.
+  BUILDX_DIR="$HOME/.docker/buildx"
+  if [ -d "$BUILDX_DIR" ]; then
+    ME="$(id -un)"
+    FOREIGN="$(find "$BUILDX_DIR" ! -user "$ME" -print 2>/dev/null | head -n1 || true)"
+    if [ -n "$FOREIGN" ]; then
+      echo "WARNING: some files under $BUILDX_DIR are not owned by '$ME'" >&2
+      echo "         (e.g. $FOREIGN)" >&2
+      echo "         This usually makes 'docker build' fail with 'permission denied'." >&2
+      echo "         Fix it with:" >&2
+      echo "             sudo chown -R \"$ME\" \"$BUILDX_DIR\"" >&2
+      echo >&2
+    fi
+  fi
+
   echo "Building $IMAGE ..."
   docker build -t "$IMAGE" ${BUILD_ARGS[@]+"${BUILD_ARGS[@]}"} "$DIR"
   echo "Built $IMAGE."
@@ -56,6 +74,12 @@ ensure_bin_on_path() {
   touch "$rc"
   if grep -qF "$MARKER" "$rc"; then
     return
+  fi
+  # If the file is non-empty and its last byte is not a newline, add one first —
+  # otherwise our block glues onto the existing last line and can break it
+  # (e.g. a function's closing brace becoming `}# >>> cbox >>>`).
+  if [ -s "$rc" ] && [ -n "$(tail -c1 "$rc")" ]; then
+    echo >> "$rc"
   fi
   {
     echo "$MARKER"
