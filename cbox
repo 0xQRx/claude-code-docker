@@ -92,13 +92,13 @@ exec docker run --rm -it \
   -e HOST_UID="$(id -u)" \
   -e HOST_GID="$(id -g)" \
   -e CBOX_LOCKED="$LOCKED" \
-  -e CLAUDE_CONFIG_DIR=/home/node/.claude \
+  -e CLAUDE_CONFIG_DIR=/home/claude/.claude \
   -e TZ="${TZ:-UTC}" \
   ${CAP_ARGS[@]+"${CAP_ARGS[@]}"} \
   -v "$PWD:/workspace" \
-  -v claude-box-config:/home/node/.claude \
+  -v claude-box-config:/home/claude/.claude \
   -v claude-box-history:/commandhistory \
-  -v claude-box-cache:/home/node/.cache \
+  -v claude-box-cache:/home/claude/.cache \
   -w /workspace \
   "$IMAGE" \
   ${CMD[@]+"${CMD[@]}"}

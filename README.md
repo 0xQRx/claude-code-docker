@@ -71,8 +71,8 @@ break the "only this folder" guarantee). If you need to commit/push from inside
 the sandbox, add mounts to `cbox` explicitly, e.g.:
 
 ```bash
--v "$HOME/.gitconfig:/home/node/.gitconfig:ro"
--v "$HOME/.ssh:/home/node/.ssh:ro"
+-v "$HOME/.gitconfig:/home/claude/.gitconfig:ro"
+-v "$HOME/.ssh:/home/claude/.ssh:ro"
 ```
 
 ## MCP servers
@@ -83,8 +83,8 @@ MCP **configuration** persists; MCP server **binaries** may not. When you run
 | Scope | Stored in | Persists? |
 |---|---|---|
 | `--scope project` | `.mcp.json` in your repo | ✅ lives in the mounted `$PWD` (on the host). |
-| `--scope local` (default) | `CLAUDE_CONFIG_DIR` (`/home/node/.claude`) | ✅ `claude-box-config` volume. |
-| `--scope user` | `CLAUDE_CONFIG_DIR` (`/home/node/.claude`) | ✅ `claude-box-config` volume. |
+| `--scope local` (default) | `CLAUDE_CONFIG_DIR` (`/home/claude/.claude`) | ✅ `claude-box-config` volume. |
+| `--scope user` | `CLAUDE_CONFIG_DIR` (`/home/claude/.claude`) | ✅ `claude-box-config` volume. |
 
 The catch is the server **runtime**, not the config:
 
@@ -106,6 +106,6 @@ bake heavyweight servers into the `Dockerfile`.
 | `Dockerfile` | Shared image (Node 20 + Claude Code + tooling). |
 | `build.sh` | One-shot installer: builds the image + symlinks `cbox` onto PATH. |
 | `cbox` | Host launcher script. |
-| `cbox-entrypoint.sh` | Root entrypoint: UID-map → firewall → drop to `node`. |
+| `cbox-entrypoint.sh` | Root entrypoint: UID-map → firewall → drop to `claude`. |
 | `init-firewall.sh` | Egress allowlist (used by `--locked` and the devcontainer). |
 | `.devcontainer/devcontainer.json` | VS Code path. |
