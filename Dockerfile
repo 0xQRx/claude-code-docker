@@ -77,6 +77,13 @@ RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/
   -a "export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
   -x
 
+# Tag the prompt with (cbox) so it's obvious you're inside the sandbox.
+# Quoted heredoc (<<'EOF') prevents any build-time expansion — the line is
+# written verbatim and evaluated by zsh at runtime, after the theme sets PROMPT.
+RUN cat >> /home/node/.zshrc <<'EOF'
+PROMPT="%{$fg_bold[yellow]%}(cbox) %{$reset_color%}$PROMPT"
+EOF
+
 # Install Claude Code
 RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
