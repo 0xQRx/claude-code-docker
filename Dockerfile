@@ -63,16 +63,18 @@ ENV SHELL=/bin/zsh
 ENV EDITOR=nano
 ENV VISUAL=nano
 
-# Default powerline10k theme (installed as node)
+# Clean, font-independent robbyrussell theme (installed as node).
+# Avoids Powerlevel10k's Nerd Font requirement so the prompt renders correctly
+# in any terminal font (e.g. default macOS Terminal/iTerm) with no host changes.
 ARG ZSH_IN_DOCKER_VERSION=1.2.1
 USER node
 RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/v${ZSH_IN_DOCKER_VERSION}/zsh-in-docker.sh)" -- \
+  -t robbyrussell \
   -p git \
   -p fzf \
   -a "source /usr/share/doc/fzf/examples/key-bindings.zsh" \
   -a "source /usr/share/doc/fzf/examples/completion.zsh" \
   -a "export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
-  -a "typeset -g POWERLEVEL9K_MODE=compatible" \
   -x
 
 # Install Claude Code

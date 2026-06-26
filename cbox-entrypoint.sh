@@ -18,11 +18,13 @@ if [ "$HOST_UID" != "$(id -u node)" ]; then
 fi
 
 # Make sure home + persisted volumes are owned by the (possibly remapped) node.
-# .cache and .claude are separately-mounted volumes, so chowning /home/node
-# (non-recursive) does not cover them — chown each mountpoint explicitly or a
-# non-root host user can't write to them (gitstatusd/p10k re-fetch every run).
-chown "$HOST_UID:$HOST_GID" /home/node /commandhistory /home/node/.cache 2>/dev/null || true
-chown -R "$HOST_UID:$HOST_GID" /home/node/.claude 2>/dev/null || true
+# .cache, .claude and /commandhistory are separately-mounted volumes, so chowning
+# /home/node (non-recursive) does not cover them — chown each mountpoint, and do
+# it recursively for the ones that hold image-baked files (commandhistory's
+# .bash_history, .claude config) whose build-time owner (uid 1000) won't match a
+# non-root host user, otherwise writes fail (history error / re-fetched caches).
+chown "$HOST_UID:$HOST_GID" /home/node /home/node/.cache 2>/dev/null || true
+chown -R "$HOST_UID:$HOST_GID" /commandhistory /home/node/.claude 2>/dev/null || true
 
 # Optional egress allowlist firewall (needs --cap-add=NET_ADMIN,NET_RAW).
 if [ "${CBOX_LOCKED:-0}" = "1" ]; then
